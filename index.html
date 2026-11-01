@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Little Steps — Newborn Care Simulator</title>
+<style>
+:root {
+  --glass: rgba(17,25,40,.82);
+  --line: rgba(255,255,255,.16);
+  --text: #f8fafc;
+  --muted: #cbd5e1;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; width: 100%; height: 100%; overflow: hidden;
+  background: #e8edf3; color: var(--text);
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+button { font: inherit; }
+#scene { position: fixed; inset: 0; z-index: 0; }
+#scene canvas { display:block; width:100%; height:100%; outline:none; }
+#hud {
+  position:fixed; inset:0; z-index:5; display:flex; flex-direction:column;
+  justify-content:space-between; padding:clamp(8px,1.4vw,20px); pointer-events:none;
+}
+.panel {
+  pointer-events:auto; background:var(--glass); border:1px solid var(--line);
+  backdrop-filter:blur(18px); box-shadow:0 14px 42px #0f172a2b; border-radius:18px;
+}
+header {
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:12px 16px; max-width:100%;
+}
+.brand h1 { font-size:clamp(14px,1.3vw,19px); margin:0 0 4px; }
+.brand p { font-size:11px; color:#cbd5e1; margin:0; }
+.top-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.btn {
+  border:1px solid #ffffff22; border-radius:11px; padding:9px 12px;
+  background:#ffffff12; color:white; cursor:pointer; font-size:12px; font-weight:700;
+}
+.btn.primary { background:#0f766e; border-color:#5eead4; }
+.btn.purple { background:#6d28d9aa; border-color:#c4b5fd; }
+#left-stack {
+  display:flex; flex-direction:column; gap:10px; align-self:flex-start;
+  max-width:min(310px,calc(100vw - 20px)); margin-top:12px;
+}
+.vitals { padding:15px; width:100%; }
+.eyebrow { font-size:10px; letter-spacing:.15em; text-transform:uppercase; color:#bae6fd; font-weight:800; }
+.status {
+  display:inline-flex; margin:8px 0 14px; padding:5px 9px; border-radius:999px;
+  font-size:11px; font-weight:800; background:#065f46; color:#d1fae5;
+}
+.status.need { background:#854d0e; color:#fef3c7; }
+.vital { margin:0 0 12px; }
+.vital-head { display:flex; justify-content:space-between; font-size:11px; margin-bottom:5px; }
+.meter { height:6px; border-radius:99px; background:#ffffff1e; overflow:hidden; }
+.fill { height:100%; width:50%; border-radius:99px; transition:width .3s; }
+.hint { padding:12px 14px; font-size:12px; line-height:1.5; color:#e0f2fe; }
+#bottom {
+  align-self:center; display:flex; flex-direction:column; align-items:center;
+  gap:9px; width:100%; pointer-events:none;
+}
+.actions {
+  pointer-events:auto; display:flex; justify-content:center; gap:8px;
+  padding:10px; max-width:100%; flex-wrap:wrap;
+}
+.action {
+  min-width:83px; display:flex; flex-direction:column; align-items:center; gap:5px;
+  padding:10px 12px; background:#ffffff0d; border:1px solid #ffffff20;
+  border-radius:13px; color:white; cursor:pointer; font-size:11px; font-weight:750;
+}
+.action .emoji { font-size:22px; }
+.action:hover { background:#0e7490; border-color:#67e8f9; }
+#tip {
+  max-width:min(760px,95vw); text-align:center; padding:9px 15px;
+  border:1px solid #7dd3fc66; border-radius:999px; background:#0f172ae8;
+  color:#e0f2fe; font-size:11px; line-height:1.4; pointer-events:auto;
+}
+#disclaimer { font-size:9px; color:#e2e8f0; text-align:center; }
+#center-toast {
+  position:fixed; z-index:8; left:50%; top:50%; transform:translate(-50%,-50%);
+  padding:12px 17px; border-radius:14px; background:#0f172aeb;
+  border:1px solid #7dd3fc88; color:white; font-size:13px;
+  opacity:0; pointer-events:none; transition:opacity .2s; text-align:center;
+}
+#center-toast.show { opacity:1; }
+#modal {
+  display:none; position:fixed; inset:0; z-index:20; background:#080b18ed;
+  align-items:center; justify-content:center; padding:20px;
+}
+.modal-box {
+  max-width:500px; text-align:center; padding:28px;
+  border:1px solid #c4b5fd66; background:#17172e;
+  border-radius:22px; box-shadow:0 20px 70px #0006;
+}
+.modal-box p { font-size:14px; line-height:1.7; color:#cbd5e1; }
+#help {
+  position:fixed; right:14px; bottom:125px; z-index:6;
+  background:#0f172ae8; border:1px solid #ffffff26; border-radius:12px;
+  padding:10px 12px; color:#e2e8f0; font-size:10px; line-height:1.6;
+  max-width:200px; pointer-events:none;
+}
+@media(max-width:700px) {
+  header { align-items:flex-start; padding:10px; }
+  .brand p { display:none; }
+  .top-actions { gap:5px; }
+  .btn { padding:8px; font-size:10px; }
+  #left-stack { max-width:205px; margin-top:8px; }
+  .vitals { padding:11px; }
+  .actions { gap:5px; padding:7px; }
+  .action { min-width:68px; padding:7px 8px; font-size:9px; }
+  .action .emoji { font-size:18px; }
+  #tip { font-size:10px; border-radius:12px; }
+  #help { display:none; }
+}
+</style>
+</head>
+<body>
+<div id="scene"></div>
+
+<div id="hud">
+  <header class="panel">
+    <div class="brand">
+      <h1>🍼 Little Steps <span style="color:#a7f3d0">/ Care Simulator</span></h1>
+      <p>Interactive nursery · learn one gentle step at a time</p>
+    </div>
+    <div class="top-actions">
+      <button class="btn" id="soundBtn">🔊 Sound On</button>
+      <button class="btn" id="dayBtn">☀️ Day</button>
+      <button class="btn purple" id="gardenBtn">🕊 Quiet Garden</button>
+      <button class="btn primary" id="vrBtn">🥽 Enter VR</button>
+    </div>
+  </header>
+
+  <div id="left-stack">
+    <section class="panel vitals">
+      <div class="eyebrow">Baby wellbeing · simulation only</div>
+      <div id="status" class="status">CALM & RESTING</div>
+      <div class="vital">
+        <div class="vital-head"><span>🍼 Fullness</span><b id="hungerVal">85%</b></div>
+        <div class="meter"><div class="fill" id="hungerBar" style="background:#34d399"></div></div>
+      </div>
+      <div class="vital">
+        <div class="vital-head"><span>🧷 Diaper comfort</span><b id="diaperVal">90%</b></div>
+        <div class="meter"><div class="fill" id="diaperBar" style="background:#67e8f9"></div></div>
+      </div>
+      <div class="vital">
+        <div class="vital-head"><span>💜 Calmness</span><b id="comfortVal">92%</b></div>
+        <div class="meter"><div class="fill" id="comfortBar" style="background:#c4b5fd"></div></div>
+      </div>
+      <div class="vital">
+        <div class="vital-head"><span>🌙 Sleep readiness</span><b id="sleepVal">70%</b></div>
+        <div class="meter"><div class="fill" id="sleepBar" style="background:#fcd34d"></div></div>
+      </div>
+    </section>
+    <div class="panel hint" id="objectHint">
+      <strong>Try it:</strong> Move with W/A/S/D, drag to look 360°, then interact.
+    </div>
+  </div>
+
+  <div id="bottom">
+    <div class="panel actions">
+      <button class="action" data-action="hold"><span class="emoji">🤱</span><span id="holdBtnLabel">Pick up baby</span></button>
+      <button class="action" data-action="feed"><span class="emoji">🍼</span>Feed bottle</button>
+      <button class="action" data-action="burp"><span class="emoji">🧸</span>Burp baby</button>
+      <button class="action" data-action="diaper"><span class="emoji">🧷</span>Change diaper</button>
+      <button class="action" data-action="soothe"><span class="emoji">🎵</span>Soothe</button>
+      <button class="action" data-action="swaddle"><span class="emoji">🧺</span>Swaddle</button>
+      <button class="action" data-action="crib"><span class="emoji">🛏️</span>Safe sleep</button>
+    </div>
+    <div id="tip">💡 Early hunger cues can include rooting, sucking on hands, and lip-smacking.</div>
+    <div id="disclaimer">Educational simulation only — not medical advice or treatment.</div>
+  </div>
+</div>
+
+<div id="help">W A S D: move · Drag: look around<br>E: interact nearby · Click: select object<br>VR: point controller + trigger</div>
+<div id="center-toast" role="status"></div>
+<div id="modal">
+  <div class="modal-box">
+    <div style="font-size:40px">🕯️</div>
+    <h2>The Quiet Garden of Remembrance</h2>
+    <p>A peaceful space for parents navigating pregnancy loss, miscarriage, or grief. There is no right way to grieve, and you deserve kindness and support.</p>
+    <button class="btn purple" id="closeGarden">Return to nursery</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script>
+(() => {
+'use strict';
+
+const $ = id => document.getElementById(id);
+const sceneHost = $('scene');
+
+const state = {
+  hunger:85, diaper:90, comfort:92, sleep:70,
+  swaddled:true, inCrib:true, held:false, isDay:true, need:'none'
+};
+
+let scene, camera, renderer, controls, raycaster, mouse, clock;
+let baby, bottle, crib, changingPad, mobileGroup, mother, hoverObject=null;
+let audioCtx=null, vrSession=null, toastTimer=null, cryingLoop=null;
+let soundEnabled=true, lastFootstepAt=0;
+const keys=Object.create(null);
+const interactive=[];
+
+function say(text) { $('tip').textContent='💡 '+text; }
+
+function toast(text) {
+  const el=$('center-toast');
+  el.textContent=text;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove('show'),1900);
+}
+
+function sound(kind='chime') {
+  if (!soundEnabled) return;
+  try {
+    audioCtx ||= new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state==='suspended') audioCtx.resume();
+    const now=audioCtx.currentTime;
+
+    const tone=(freq,type,duration,volume=.04,endFreq=null,delay=0)=>{
+      const osc=audioCtx.createOscillator();
+      const gain=audioCtx.createGain();
+      osc.type=type;
+      osc.frequency.setValueAtTime(freq,now+delay);
+      if(endFreq) osc.frequency.exponentialRampToValueAtTime(Math.max(1,endFreq),now+delay+duration*.75);
+      gain.gain.setValueAtTime(.0001,now+delay);
+      gain.gain.exponentialRampToValueAtTime(volume,now+delay+.025);
+      gain.gain.exponentialRampToValueAtTime(.0001,now+delay+duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now+delay);
+      osc.stop(now+delay+duration+.02);
+    };
+
+    const noise=(duration,volume=.02,filterFreq=1300)=>{
+      const n=Math.floor(audioCtx.sampleRate*duration);
+      const buffer=audioCtx.createBuffer(1,n,audioCtx.sampleRate);
+      const data=buffer.getChannelData(0);
+      for(let i=0;i<n;i++) data[i]=(Math.random()*2-1)*(1-i/n);
+      const src=audioCtx.createBufferSource();
+      const filter=audioCtx.createBiquadFilter();
+      const gain=audioCtx.createGain();
+      src.buffer=buffer;
+      filter.type='lowpass';
+      filter.frequency.value=filterFreq;
+      gain.gain.setValueAtTime(volume,now);
+      gain.gain.exponentialRampToValueAtTime(.0001,now+duration);
+      src.connect(filter);
+      filter.connect(gain);
+      gain.connect(audioCtx.destination);
+      src.start(now);
+      src.stop(now+duration);
+    };
+
+    switch(kind) {
+      case 'cry':
+        tone(420,'sawtooth',.48,.022,640);
+        tone(590,'triangle',.35,.018,390,.42);
+        tone(430,'sawtooth',.42,.02,610,.84);
+        break;
+      case 'shush':
+        noise(.7,.022,850);
+        tone(170,'sine',.55,.018,135);
+        break;
+      case 'feed':
+        tone(600,'sine',.09,.018,520);
+        tone(720,'sine',.08,.014,620,.18);
+        tone(520,'sine',.12,.018,430,.38);
+        break;
+      case 'diaper':
+        noise(.35,.025,1800);
+        tone(880,'sine',.09,.02,660,.12);
+        break;
+      case 'swaddle':
+        noise(.55,.025,1100);
+        tone(460,'sine',.18,.025,520,.12);
+        break;
+      case 'burp':
+        tone(145,'triangle',.20,.035,100);
+        tone(260,'sine',.14,.02,220,.2);
+        break;
+      case 'footstep':
+        tone(105,'triangle',.06,.012,75);
+        noise(.045,.008,600);
+        break;
+      default:
+        tone(660,'sine',.28,.05,880);
+        tone(880,'sine',.34,.035,990,.12);
+    }
+  } catch(e) {
+    console.warn('Audio unavailable:',e);
+  }
+}
+
+function startCryingLoop() {
+  if(cryingLoop || !soundEnabled) return;
+  cryingLoop=setInterval(()=>{
+    if(state.need==='none' || !soundEnabled) {
+      stopCryingLoop();
+      return;
+    }
+    sound('cry');
+  },3000);
+}
+function stopCryingLoop() {
+  if(cryingLoop) clearInterval(cryingLoop);
+  cryingLoop=null;
+}
+
+function mat(color,roughness=.75,metalness=0,extra={}) {
+  return new THREE.MeshStandardMaterial({color,roughness,metalness,...extra});
+}
+function mesh(geo,material,parent,pos=[0,0,0],name='') {
+  const m=new THREE.Mesh(geo,material);
+  m.position.set(...pos);
+  m.name=name;
+  m.castShadow=true;
+  m.receiveShadow=true;
+  if(parent) parent.add(m);
+  return m;
+}
+function group(parent,pos=[0,0,0]) {
+  const g=new THREE.Group();
+  g.position.set(...pos);
+  if(parent) parent.add(g);
+  return g;
+}
+function makeInteractive(obj,action,label) {
+  obj.userData.action=action;
+  obj.userData.label=label;
+  interactive.push(obj);
+  return obj;
+}
+function addBox(parent,pos,size,material) {
+  return mesh(new THREE.BoxGeometry(...size),material,parent,pos);
+}
+
+function createBaby() {
+  const g=group(scene,[0,.77,.05]);
+  g.name='Baby';
+
+  const skin=mat(0xf2c5a8,.82);
+  const onesie=mat(0xa8cfc2,.92);
+  const dark=mat(0x55413c,.55);
+  const blush=mat(0xeaa2a1,.9);
+
+  const body=mesh(new THREE.SphereGeometry(.17,32,24),onesie,g,[0,0,0]);
+  body.scale.set(.75,.72,1.5);
+
+  mesh(new THREE.SphereGeometry(.135,32,24),onesie,g,[0,.045,-.045]).scale.set(1,.8,1.08);
+  const head=mesh(new THREE.SphereGeometry(.145,40,32),skin,g,[0,.105,-.245]);
+
+  const ear=mesh(new THREE.SphereGeometry(.035,20,16),skin,g,[-.137,.105,-.23]);
+  const ear2=ear.clone();
+  ear2.position.x=.137;
+  g.add(ear2);
+
+  for(const x of [-.052,.052]) {
+    mesh(new THREE.SphereGeometry(.012,16,12),dark,g,[x,.115,-.115]);
+    mesh(new THREE.SphereGeometry(.026,16,12),blush,g,[x*1.45,.072,-.12]).scale.set(1,.65,.35);
+  }
+  mesh(new THREE.SphereGeometry(.018,16,12),skin,g,[0,.085,-.112]);
+  const mouth=mesh(new THREE.TorusGeometry(.018,.0035,8,20,Math.PI),dark,g,[0,.055,-.108]);
+  mouth.rotation.z=Math.PI;
+
+  mesh(new THREE.SphereGeometry(.148,32,20,0,Math.PI*2,0,Math.PI*.58),mat(0xf2c8d4),g,[0,.16,-.25]).scale.set(1,.65,1);
+
+  const babyArms=[];
+  for(const side of [-1,1]) {
+    const arm=mesh(new THREE.CapsuleGeometry(.027,.13,4,10),onesie,g,[side*.145,-.005,-.02]);
+    arm.rotation.z=side*.65;
+    babyArms.push(arm);
+    mesh(new THREE.SphereGeometry(.032,16,12),skin,g,[side*.205,-.015,-.01]);
+    const leg=mesh(new THREE.CapsuleGeometry(.035,.13,4,10),onesie,g,[side*.075,-.09,.18]);
+    leg.rotation.x=Math.PI/2.5;
+    mesh(new THREE.SphereGeometry(.04,16,12),skin,g,[side*.08,-.095,.25]).scale.set(.85,.75,1.1);
+  }
+
+  const wrap=mesh(new THREE.SphereGeometry(.18,32,24),mat(0x9bc6bd),g,[0,-.015,.03]);
+  wrap.scale.set(.8,.72,1.15);
+  wrap.visible=state.swaddled;
+
+  g.userData.wrap=wrap;
+  g.userData.head=head;
+  g.userData.body=body;
+  g.userData.mouth=mouth;
+  g.userData.arms=babyArms;
+
+  makeInteractive(g,'hold','Baby');
+  return g;
+}
+
+function createMother() {
+  const g=group(scene,[0,0,1.65]);
+  g.name='Mother';
+
+  const skin=mat(0xc98f70,.82);
+  const hair=mat(0x30231f,.9);
+  const shirt=mat(0x729b91,.82);
+  const pants=mat(0x536b83,.9);
+  const shoes=mat(0xeee5d8,.85);
+
+  const torso=mesh(new THREE.CapsuleGeometry(.22,.42,6,16),shirt,g,[0,1.13,0]);
+  torso.scale.set(.92,1,.58);
+  mesh(new THREE.CylinderGeometry(.07,.08,.11,16),skin,g,[0,1.43,0]);
+
+  const head=group(g,[0,1.63,-.015]);
+  mesh(new THREE.SphereGeometry(.17,28,24),skin,head).scale.set(.9,1.08,.9);
+  mesh(new THREE.SphereGeometry(.18,28,20,0,Math.PI*2,0,Math.PI*.68),hair,head,[0,.055,-.035]).scale.set(1.02,1.1,1.02);
+  mesh(new THREE.SphereGeometry(.09,18,14),hair,head,[0,.10,.11]).scale.set(.85,1.05,.8);
+
+  const arms=[],legs=[];
+  g.userData.hands=[];
+
+  for(const side of [-1,1]) {
+    const arm=mesh(new THREE.CapsuleGeometry(.065,.32,5,12),shirt,g,[side*.25,1.13,-.015]);
+    arms.push(arm);
+    const hand=mesh(new THREE.SphereGeometry(.065,16,12),skin,g,[side*.28,.86,-.025]);
+    g.userData.hands.push(hand);
+
+    const leg=group(g,[side*.105,.68,0]);
+    legs.push(leg);
+    mesh(new THREE.CapsuleGeometry(.085,.38,5,12),pants,leg,[0,-.25,0]);
+    mesh(new THREE.SphereGeometry(.09,16,12),shoes,leg,[0,-.49,-.055]).scale.set(1,.55,1.4);
+  }
+
+  g.userData.arms=arms;
+  g.userData.legs=legs;
+  mesh(new THREE.TorusGeometry(.32,.009,8,40),mat(0x7dd3fc,.4),g,[0,.025,0]).rotation.x=-Math.PI/2;
+  return g;
+}
+
+function createBottle() {
+  const g=group(scene,[1.2,.79,.12]);
+  g.name='Feeding bottle';
+  const glass=new THREE.MeshPhysicalMaterial({
+    color:0xe8f6ff,roughness:.15,transparent:true,opacity:.8,clearcoat:1
+  });
+  mesh(new THREE.CylinderGeometry(.045,.05,.19,32),glass,g,[0,.095,0]);
+  mesh(new THREE.CylinderGeometry(.045,.045,.012,32),mat(0xf8fafc),g,[0,.08,0]);
+  mesh(new THREE.CylinderGeometry(.033,.033,.04,24),mat(0xf0bd6d),g,[0,.215,0]);
+  mesh(new THREE.SphereGeometry(.025,24,16),mat(0xf6d7a8),g,[0,.246,0]);
+  makeInteractive(g,'feed','Feeding bottle');
+  return g;
+}
+
+function createCrib() {
+  const g=group(scene,[-.05,0,-.15]);
+  g.name='Crib';
+  const wood=mat(0xd7b58b,.65);
+  const pale=mat(0xf8fafc,.8);
+  const rail=mat(0xfaf3e8,.4);
+
+  addBox(g,[0,.53,0],[.94,.09,1.45],wood);
+  addBox(g,[0,.60,0],[.82,.10,1.30],pale);
+
+  for(const x of [-.49,.49]) {
+    for(const z of [-.73,.73]) {
+      mesh(new THREE.CylinderGeometry(.035,.04,.78,20),wood,g,[x,.39,z]);
+    }
+  }
+  for(const z of [-.73,.73]) {
+    addBox(g,[0,.56,z],[.94,.07,.065],wood);
+    for(let x=-.41;x<=.42;x+=.105) mesh(new THREE.CylinderGeometry(.012,.012,.47,12),rail,g,[x,.31,z]);
+  }
+  for(const x of [-.49,.49]) {
+    addBox(g,[x,.56,0],[.065,.07,1.4],wood);
+    for(let z=-.61;z<=.62;z+=.12) mesh(new THREE.CylinderGeometry(.012,.012,.46,12),rail,g,[x,.31,z]);
+  }
+  makeInteractive(g,'crib','Safe-sleep crib');
+  return g;
+}
+
+function createChangingStation() {
+  const g=group(scene,[1.5,0,-.55]);
+  g.name='Changing station';
+  const wood=mat(0xb98c67,.8);
+  const cream=mat(0xfff4e7,.8);
+  const sage=mat(0xd3e5dc,.8);
+
+  addBox(g,[0,.72,0],[1,.10,.72],wood);
+  for(const x of [-.42,.42]) {
+    for(const z of [-.27,.27]) addBox(g,[x,.36,z],[.07,.72,.07],wood);
+  }
+  const pad=addBox(g,[-.05,.80,0],[.65,.055,.52],sage);
+  makeInteractive(pad,'diaper','Changing pad');
+  makeInteractive(g,'diaper','Changing station');
+  addBox(g,[.32,.82,.12],[.16,.035,.16],cream);
+  return g;
+}
+
+function createMobile() {
+  const g=group(scene,[-.05,1.65,-.15]);
+  const rodmat=mat(0xb7a28c,.55);
+  mesh(new THREE.CylinderGeometry(.012,.012,.45,12),rodmat,g);
+  mesh(new THREE.CylinderGeometry(.009,.009,.48,12),rodmat,g,[0,-.18,0]).rotation.z=Math.PI/2;
+
+  const colors=[0xf2c8d4,0x9bc6bd,0xf5d38c,0xb7c9f4];
+  for(let i=0;i<4;i++) {
+    const x=(i-1.5)*.105;
+    mesh(new THREE.CylinderGeometry(.002,.002,.15,8),rodmat,g,[x,-.29,0]);
+    const star=mesh(new THREE.OctahedronGeometry(.045,1),mat(colors[i],.45),g,[x,-.38,0]);
+    star.rotation.z=i*.4;
+  }
+  return g;
+}
+
+function createRoom() {
+  scene.background=new THREE.Color(0xe6edf2);
+  scene.fog=new THREE.Fog(0xe6edf2,6,15);
+
+  mesh(new THREE.PlaneGeometry(12,12),mat(0xc9b79f),scene,[0,0,0]).rotation.x=-Math.PI/2;
+  mesh(new THREE.PlaneGeometry(8,3.6),mat(0xf4eee7),scene,[0,1.8,-2.7]);
+  const side=mesh(new THREE.PlaneGeometry(7,3.6),mat(0xe5ece4),scene,[-3,1.8,.1]);
+  side.rotation.y=Math.PI/2;
+
+  addBox(scene,[-1.25,2,-2.66],[1.48,1.15,.06],mat(0xfffaf3));
+  mesh(new THREE.PlaneGeometry(1.3,.97),mat(0xa8d7ee),scene,[-1.25,2,-2.625]);
+
+  addBox(scene,[0,.08,-2.66],[6,.12,.06],mat(0xd6c4ae));
+  const rug=mesh(new THREE.CylinderGeometry(1.25,1.25,.025,64),mat(0xd9c4c6),scene,[0,.02,.45]);
+  rug.scale.set(1.35,1,1);
+
+  for(const [x,y,c] of [[1.25,2.25,0xd0dfd6],[2.05,2.25,0xf0d6b7]]) {
+    addBox(scene,[x,y,-2.64],[.52,.62,.045],mat(0xfffaf3));
+    addBox(scene,[x,y,-2.61],[.43,.53,.02],mat(c));
+  }
+
+  mesh(new THREE.CylinderGeometry(.12,.09,.2,24),mat(0xc99b78),scene,[-2.2,.1,-1.5]);
+  for(let i=0;i<5;i++) {
+    const leaf=mesh(new THREE.SphereGeometry(.09,16,12),mat(i%2?0x779c7c:0x91b59a),scene,[-2.2+Math.sin(i*2)*.16,.32+i%2*.08,-1.5+Math.cos(i*2)*.08]);
+    leaf.scale.set(.55,1.7,.4);
+    leaf.rotation.z=(i-2)*.35;
+  }
+
+  const lamp=group(scene,[2.55,1.2,-1.2]);
+  mesh(new THREE.CylinderGeometry(.08,.12,.20,24),mat(0xe8d5b8),lamp);
+  mesh(new THREE.SphereGeometry(.16,24,16),new THREE.MeshStandardMaterial({color:0xffedbd,emissive:0xffd17b,emissiveIntensity:.35}),lamp,[0,.16,0]);
+}
+
+function setup() {
+  scene=new THREE.Scene();
+  createRoom();
+
+  camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.1,100);
+  camera.position.set(3.3,2.55,4.6);
+  camera.lookAt(0,.85,0);
+
+  renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+  renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.8));
+  renderer.setSize(innerWidth,innerHeight);
+  renderer.xr.enabled=true;
+  renderer.shadowMap.enabled=true;
+  renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  renderer.outputColorSpace=THREE.SRGBColorSpace;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure=1.12;
+  sceneHost.appendChild(renderer.domElement);
+
+  controls={
+    target:new THREE.Vector3(0,.82,0),drag:false,lastX:0,lastY:0,
+    theta:Math.atan2(camera.position.x,camera.position.z),
+    phi:1.15,
+    radius:camera.position.distanceTo(new THREE.Vector3(0,.82,0))
+  };
+
+  const updateCamera=()=>{
+    controls.phi=Math.max(.18,Math.min(1.48,controls.phi));
+    controls.radius=Math.max(2.2,Math.min(8,controls.radius));
+    camera.position.set(
+      controls.target.x+controls.radius*Math.sin(controls.phi)*Math.sin(controls.theta),
+      controls.target.y+controls.radius*Math.cos(controls.phi),
+      controls.target.z+controls.radius*Math.sin(controls.phi)*Math.cos(controls.theta)
+    );
+    camera.lookAt(controls.target);
+  };
+
+  renderer.domElement.addEventListener('pointerdown',e=>{
+    if(e.button!==0)return;
+    controls.drag=true;controls.lastX=e.clientX;controls.lastY=e.clientY;
+    renderer.domElement.setPointerCapture?.(e.pointerId);
+  });
+  renderer.domElement.addEventListener('pointermove',e=>{
+    if(!controls.drag)return;
+    const dx=e.clientX-controls.lastX,dy=e.clientY-controls.lastY;
+    controls.lastX=e.clientX;controls.lastY=e.clientY;
+    controls.theta-=dx*.006;controls.phi-=dy*.005;
+    updateCamera();
+  });
+  const stopDrag=()=>controls.drag=false;
+  renderer.domElement.addEventListener('pointerup',stopDrag);
+  renderer.domElement.addEventListener('pointercancel',stopDrag);
+  renderer.domElement.addEventListener('wheel',e=>{
+    controls.radius+=e.deltaY*.003;updateCamera();
+  },{passive:true});
+  renderer.domElement.addEventListener('contextmenu',e=>e.preventDefault());
+
+  raycaster=new THREE.Raycaster();
+  mouse=new THREE.Vector2();
+  clock=new THREE.Clock();
+
+  scene.add(new THREE.HemisphereLight(0xfff4e7,0x697d78,2));
+  const key=new THREE.DirectionalLight(0xffe3c1,3);
+  key.position.set(-3,6,4);
+  key.castShadow=true;
+  key.shadow.mapSize.set(1024,1024);
+  scene.add(key);
+  const fill=new THREE.DirectionalLight(0xc6e5ff,1.15);
+  fill.position.set(3,3,2);
+  scene.add(fill);
+
+  createCrib();
+  createChangingStation();
+  bottle=createBottle();
+  mobileGroup=createMobile();
+  baby=createBaby();
+  mother=createMother();
+
+  baby.position.set(-.05,.73,-.15);
+  state.inCrib=true;
+
+  window.addEventListener('keydown',e=>{
+    const k=e.key.toLowerCase();
+    keys[k]=true;
+    if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();
+    if(k==='e')interactNearby();
+  });
+  window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+  window.addEventListener('blur',()=>{for(const k in keys)keys[k]=false;});
+  window.addEventListener('resize',resize);
+
+  renderer.domElement.addEventListener('pointermove',onPointerHover);
+  renderer.domElement.addEventListener('click',onCanvasClick);
+
+  setupVRControllers();
+  animate();
+}
+
+function resize() {
+  if(!renderer)return;
+  camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+}
+
+function findInteractive(object) {
+  while(object&&object!==scene) {
+    if(object.userData?.action)return object;
+    object=object.parent;
+  }
+  return null;
+}
+
+function castAt(clientX,clientY) {
+  const rect=renderer.domElement.getBoundingClientRect();
+  mouse.x=((clientX-rect.left)/rect.width)*2-1;
+  mouse.y=-((clientY-rect.top)/rect.height)*2+1;
+  raycaster.setFromCamera(mouse,camera);
+  const hits=raycaster.intersectObjects(interactive,true);
+  for(const hit of hits) {
+    const target=findInteractive(hit.object);
+    if(target)return {target,hit};
+  }
+  return null;
+}
+
+function onPointerHover(e) {
+  if(controls.drag)return;
+  const found=castAt(e.clientX,e.clientY);
+  const next=found?.target||null;
+  if(next!==hoverObject) {
+    if(hoverObject)restoreHighlight(hoverObject);
+    hoverObject=next;
+    if(hoverObject)highlight(hoverObject);
+  }
+  renderer.domElement.style.cursor=hoverObject?'pointer':'grab';
+}
+
+const originalMats=new WeakMap();
+function highlight(obj) {
+  obj.traverse(o=>{
+    if(o.isMesh&&o.material) {
+      if(!originalMats.has(o))originalMats.set(o,o.material);
+      o.material=o.material.clone();
+      if(o.material.emissive)o.material.emissive.set(0x1a8c8c);
+    }
+  });
+}
+function restoreHighlight(obj) {
+  obj.traverse(o=>{
+    if(o.isMesh&&originalMats.has(o))o.material=originalMats.get(o);
+  });
+}
+
+let pointerDown={x:0,y:0};
+document.addEventListener('pointerdown',e=>pointerDown={x:e.clientX,y:e.clientY},true);
+
+function onCanvasClick(e) {
+  if(Math.hypot(e.clientX-pointerDown.x,e.clientY-pointerDown.y)>7)return;
+  const found=castAt(e.clientX,e.clientY);
+  if(!found)return;
+  if(mother && mother.position.distanceTo(found.target.getWorldPosition(new THREE.Vector3()))>3) {
+    toast('Walk closer to interact');
+    return;
+  }
+  performAction(found.target.userData.action);
+}
+
+function performAction(action) {
+  if(action==='feed'&&!state.held) {
+    say('Pick up the baby first. Support the head and neck before feeding.');
+    toast('Pick up baby before feeding');
+    return;
+  }
+
+  sound(action==='soothe'?'shush':
+         action==='feed'?'feed':
+         action==='diaper'?'diaper':
+         action==='swaddle'?'swaddle':
+         action==='burp'?'burp':'chime');
+
+  switch(action) {
+    case 'hold':
+      if(state.held) {
+        state.held=false;
+        state.inCrib=true;
+        $('holdBtnLabel').textContent='Pick up baby';
+        scene.attach(baby);
+        baby.position.set(-.05,.73,-.15);
+        baby.rotation.set(0,0,0);
+        say('Baby placed on their back in the empty crib.');
+        toast('Baby placed in crib');
+      } else {
+        state.held=true;
+        state.inCrib=false;
+        $('holdBtnLabel').textContent='Put baby down';
+        mother.add(baby);
+        baby.position.set(0,1.0,-.34);
+        baby.rotation.set(0,Math.PI,0);
+        say('Hold baby close. Support the head and neck and move gently.');
+        toast('Baby picked up');
+      }
+      break;
+
+    case 'feed':
+      if(!state.held)break;
+      if(bottle) {
+        mother.add(bottle);
+        bottle.position.set(.055,1.055,.012);
+        bottle.rotation.set(-Math.PI/2,0,-.12);
+        bottle.scale.set(.82,.82,.82);
+
+        // Keep bottle near baby's mouth during the simulated feeding sequence.
+        const started=performance.now();
+        const finish=()=>{
+          if(performance.now()-started<3200) {
+            requestAnimationFrame(finish);
+            return;
+          }
+          scene.attach(bottle);
+          bottle.position.set(1.2,.79,.12);
+          bottle.rotation.set(0,0,-.22);
+          bottle.scale.set(1,1,1);
+        };
+        requestAnimationFrame(finish);
+      }
+
+      state.hunger=Math.min(100,state.hunger+35);
+      state.sleep=Math.max(0,state.sleep-3);
+      state.need=state.hunger<40?'hunger':'none';
+      say('Bottle-feeding practice: keep baby close, support the head and neck, angle the bottle, and follow feeding cues. Never prop a bottle.');
+      toast('Bottle feeding');
+      break;
+
+    case 'burp':
+      state.comfort=Math.min(100,state.comfort+20);
+      say('Hold baby upright with head and neck supported, and pat gently.');
+      toast('Burping practice');
+      break;
+
+    case 'diaper':
+      state.diaper=100;
+      state.comfort=Math.min(100,state.comfort+15);
+      if(state.need==='diaper')state.need='none';
+      say('Practice a clean diaper change. Never leave a baby unattended on a raised surface.');
+      toast('Diaper changed');
+      break;
+
+    case 'soothe':
+      state.comfort=Math.min(100,state.comfort+30);
+      if(state.comfort>=40)state.need='none';
+      say('Try a calm voice, gentle rocking, and soft shushing. Never shake a baby.');
+      toast('Soothing practice');
+      break;
+
+    case 'swaddle':
+      state.swaddled=!state.swaddled;
+      baby.userData.wrap.visible=state.swaddled;
+      state.comfort=Math.min(100,state.comfort+12);
+      say('Keep swaddling loose around the hips and place baby on their back for sleep.');
+      toast(state.swaddled?'Swaddled':'Swaddle removed');
+      break;
+
+    case 'crib':
+      state.inCrib=true;
+      state.held=false;
+      $('holdBtnLabel').textContent='Pick up baby';
+      scene.attach(baby);
+      baby.position.set(-.05,.73,-.15);
+      baby.rotation.set(0,0,0);
+      state.sleep=Math.min(100,state.sleep+25);
+      state.need=state.sleep>45?'none':state.need;
+      say('Safe sleep: on the back, on a firm flat mattress, with no pillows, toys, or loose bedding.');
+      toast('Safe sleep practice');
+      break;
+  }
+
+  if(state.need==='none')stopCryingLoop();
+  updateHUD();
+}
+
+document.querySelectorAll('[data-action]').forEach(button=>{
+  button.addEventListener('click',()=>performAction(button.dataset.action));
+});
+
+function updateHUD() {
+  for(const key of ['hunger','diaper','comfort','sleep']) {
+    $(key+'Val').textContent=Math.round(state[key])+'%';
+    $(key+'Bar').style.width=state[key]+'%';
+  }
+  const status=$('status');
+  if(state.need!=='none') {
+    status.className='status need';
+    status.textContent=state.need==='hunger'?'HUNGRY — FEEDING CUE':
+      state.need==='diaper'?'DIAPER NEEDS CHANGING':
+      state.need==='comfort'?'NEEDS COMFORT':'TIRED — SLEEP CUE';
+  } else {
+    status.className='status';
+    status.textContent=state.sleep>82?'RESTING':'CALM & AWAKE';
+  }
+}
+
+setInterval(()=>{
+  state.hunger=Math.max(0,state.hunger-.42);
+  state.diaper=Math.max(0,state.diaper-.24);
+  state.comfort=Math.max(0,state.comfort-.25);
+  state.sleep=Math.max(0,state.sleep-.15);
+
+  if(state.need==='none') {
+    if(state.hunger<35)state.need='hunger';
+    else if(state.diaper<30)state.need='diaper';
+    else if(state.comfort<25)state.need='comfort';
+    else if(state.sleep<18)state.need='sleep';
+
+    if(state.need!=='none') {
+      say('Baby may need care. Check the cues and respond gently.');
+      sound('cry');
+      startCryingLoop();
+    }
+  }
+  updateHUD();
+},3500);
+
+$('soundBtn').addEventListener('click',()=>{
+  soundEnabled=!soundEnabled;
+  $('soundBtn').textContent=soundEnabled?'🔊 Sound On':'🔇 Sound Off';
+  if(!soundEnabled)stopCryingLoop();
+  else {sound('chime');if(state.need!=='none')startCryingLoop();}
+});
+
+$('dayBtn').addEventListener('click',()=>{
+  state.isDay=!state.isDay;
+  scene.background.set(state.isDay?0xe6edf2:0x111827);
+  scene.fog.color.set(state.isDay?0xe6edf2:0x111827);
+  renderer.toneMappingExposure=state.isDay?1.12:.72;
+  $('dayBtn').textContent=state.isDay?'☀️ Day':'🌙 Night';
+});
+
+$('gardenBtn').addEventListener('click',()=>{
+  $('modal').style.display='flex';
+  sound('chime');
+});
+$('closeGarden').addEventListener('click',()=>$('modal').style.display='none');
+$('modal').addEventListener('click',e=>{
+  if(e.target===$('modal'))$('modal').style.display='none';
+});
+
+function updateMotherMovement(t) {
+  if(!mother||!controls)return;
+
+  const forward=keys.w||keys.arrowup;
+  const backward=keys.s||keys.arrowdown;
+  const left=keys.a||keys.arrowleft;
+  const right=keys.d||keys.arrowright;
+  const moving=forward||backward||left||right;
+
+  if(moving) {
+    if(t-lastFootstepAt>.42) {
+      sound('footstep');
+      lastFootstepAt=t;
+    }
+
+    const fx=-Math.sin(controls.theta);
+    const fz=-Math.cos(controls.theta);
+    let dx=0,dz=0;
+    if(forward){dx+=fx;dz+=fz;}
+    if(backward){dx-=fx;dz-=fz;}
+    if(left){dx-=Math.cos(controls.theta);dz+=Math.sin(controls.theta);}
+    if(right){dx+=Math.cos(controls.theta);dz-=Math.sin(controls.theta);}
+
+    const length=Math.hypot(dx,dz)||1;
+    dx/=length;dz/=length;
+
+    const step=.045;
+    const nx=mother.position.x+dx*step;
+    const nz=mother.position.z+dz*step;
+    const radius=.27;
+
+    const blocked=(x,z)=>{
+      if(x < -2.48+radius || x > 2.48-radius ||
+         z < -2.25+radius || z > 2.45-radius) return true;
+
+      if(x>-.05-.65-radius && x<-.05+.65+radius &&
+         z>-.15-.89-radius && z<-.15+.89+radius) return true;
+
+      if(x>1.5-.63-radius && x<1.5+.63+radius &&
+         z>-.55-.47-radius && z<-.55+.47+radius) return true;
+
+      if(Math.hypot(x+2.2,z+1.5)<.32+radius)return true;
+      return false;
+    };
+
+    // Test each axis separately so the character can slide around furniture.
+    if(!blocked(nx,mother.position.z))mother.position.x=nx;
+    if(!blocked(mother.position.x,nz))mother.position.z=nz;
+
+    mother.rotation.y=Math.atan2(dx,dz)+Math.PI;
+    mother.userData.legs.forEach((leg,i)=>{
+      leg.rotation.x=Math.sin(t*9+i*Math.PI)*.48;
+    });
+  } else {
+    mother.userData.legs.forEach(leg=>leg.rotation.x*=.75);
+  }
+
+  controls.target.x+=(mother.position.x-controls.target.x)*.08;
+  controls.target.z+=(mother.position.z-controls.target.z)*.08;
+  controls.target.y+=(1.12-controls.target.y)*.08;
+
+  camera.position.set(
+    controls.target.x+controls.radius*Math.sin(controls.phi)*Math.sin(controls.theta),
+    controls.target.y+controls.radius*Math.cos(controls.phi),
+    controls.target.z+controls.radius*Math.sin(controls.phi)*Math.cos(controls.theta)
+  );
+  camera.lookAt(controls.target);
+}
+
+function interactNearby() {
+  if(!mother)return;
+  let closest=null,best=Infinity;
+
+  for(const obj of interactive) {
+    if(state.held&&obj===baby)continue;
+    const p=obj.getWorldPosition(new THREE.Vector3());
+    const d=mother.position.distanceTo(p);
+    if(d<best){best=d;closest=obj;}
+  }
+
+  if(closest&&best<2.35) {
+    performAction(closest.userData.action);
+    toast('Interacting with '+(closest.userData.label||closest.name));
+  } else {
+    say('Walk closer to the baby, bottle, crib, or changing station, then press E.');
+    toast('Move closer to an object first');
+  }
+}
+
+function animate() {
+  renderer.setAnimationLoop(()=>{
+    const t=clock.getElapsedTime();
+    updateMotherMovement(t);
+
+    if(baby) {
+      baby.userData.body.scale.y=.72*(1+Math.sin(t*2.1)*.018);
+      baby.userData.head.rotation.z=state.need==='none'?
+        Math.sin(t*.7)*.018:Math.sin(t*7)*.045;
+
+      if(!state.held) {
+        baby.position.y=(state.inCrib?.73:.3)+Math.sin(t*2)*.003;
+      } else {
+        baby.position.set(0,1.0,-.34);
+        baby.rotation.set(0,Math.PI,0);
+      }
+
+      const crying=state.need!=='none';
+      baby.userData.mouth.scale.set(crying?1.45:1,crying?1.65:1,1);
+      baby.userData.arms.forEach((arm,i)=>{
+        arm.rotation.z=(i===0?-1:1)*(crying?.95:.65)+Math.sin(t*9+i)*(crying?.13:.02);
+      });
+    }
+
+    if(mobileGroup)mobileGroup.rotation.y=Math.sin(t*.4)*.06;
+    renderer.render(scene,camera);
+  });
+}
+
+function setupVRControllers() {
+  for(let i=0;i<2;i++) {
+    const controller=renderer.xr.getController(i);
+    scene.add(controller);
+
+    const line=new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(0,0,0),new THREE.Vector3(0,0,-3)
+      ]),
+      new THREE.LineBasicMaterial({color:0x4dd0e1,transparent:true,opacity:.9})
+    );
+    controller.add(line);
+
+    controller.addEventListener('select',()=>{
+      const origin=new THREE.Vector3();
+      controller.getWorldPosition(origin);
+      const direction=new THREE.Vector3(0,0,-1)
+        .applyQuaternion(controller.getWorldQuaternion(new THREE.Quaternion())).normalize();
+      const vrRay=new THREE.Raycaster(origin,direction,0,5);
+      const hits=vrRay.intersectObjects(interactive,true);
+
+      for(const hit of hits) {
+        const target=findInteractive(hit.object);
+        if(target) {
+          performAction(target.userData.action);
+          return;
+        }
+      }
+      toast('Point at the baby, bottle, crib, or changing pad.');
+    });
+  }
+}
+
+$('vrBtn').addEventListener('click',async()=>{
+  if(!navigator.xr) {
+    toast('WebXR unavailable. Use desktop 3D mode.');
+    return;
+  }
+  try {
+    if(!vrSession) {
+      vrSession=await navigator.xr.requestSession('immersive-vr',{
+        optionalFeatures:['local-floor','bounded-floor','hand-tracking']
+      });
+      await renderer.xr.setSession(vrSession);
+      $('vrBtn').textContent='Exit VR';
+      vrSession.addEventListener('end',()=>{
+        vrSession=null;
+        $('vrBtn').textContent='🥽 Enter VR';
+      });
+    } else {
+      await vrSession.end();
+    }
+  } catch(err) {
+    console.error(err);
+    toast('VR needs HTTPS and a compatible headset/browser.');
+  }
+});
+
+try {
+  setup();
+} catch(err) {
+  console.error('Simulator initialization failed:',err);
+  toast('Scene error — open the browser console for details.');
+}
+})();
+</script>
+</body>
+</html>
